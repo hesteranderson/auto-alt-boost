@@ -6,22 +6,34 @@ export default function HeroHome() {
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setLoading(true);
-    setResult("AutoAltBoost is analyzing your image...");
+    setResult("AutoAltBoost is analyzing competitors and generating SEO...");
 
     try {
       const response = await fetch("https://auto-alt-boost.hester-anderson1981.workers.dev", {
         method: "POST",
         body: file,
       });
-      const data = await response.json();
-      setResult(data.description);
+      
+      const json = await response.json();
+      
+      // Since the Worker now sends back an object, we format it for the screen
+      const formattedResult = `
+        ALT TEXT: ${json.alt_text}
+        
+        DESCRIPTION: ${json.description}
+        
+        KEYWORDS:
+        ${json.keywords}
+      `;
+      
+      setResult(formattedResult);
     } catch (error) {
-      setResult("Error connecting to AI. Check your Worker URL.");
+      setResult("Error: Make sure your Serper API Key is inside the Worker code.");
     } finally {
       setLoading(false);
     }
