@@ -2,41 +2,29 @@
 
 import { useState } from "react";
 
-// Define the data structure for TypeScript
-interface SEOData {
-  alt_text: string;
-  description: string;
-  keywords: string;
-}
-
-interface ImageItem {
-  id: string;
-  file: File;
-  preview: string;
-  status: 'Uploading' | 'Processing' | 'Ready' | 'Error';
-  data: SEOData | null;
-}
-
 export default function HeroHome() {
-  const [items, setItems] = useState<ImageItem[]>([]);
+  const [items, setItems] = useState([]);
   const [isBulkLoading, setIsBulkLoading] = useState(false);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     setIsBulkLoading(true);
 
-    const newUploads: ImageItem[] = Array.from(files).map((file) => ({
+    // 1. Map the files into a local state immediately for the UI
+    const newUploads = Array.from(files).map((file) => ({
       id: Math.random().toString(36).substring(7),
       file,
       preview: URL.createObjectURL(file),
       status: 'Processing',
       data: null,
+      errorMsg: null
     }));
 
     setItems((prev) => [...prev, ...newUploads]);
 
+    // 2. Process each image sequentially to avoid overloading the Worker
     for (const item of newUploads) {
       try {
         const response = await fetch("https://auto-alt-boost.hester-anderson1981.workers.dev", {
@@ -44,19 +32,25 @@ export default function HeroHome() {
           body: item.file,
         });
 
-        if (!response.ok) throw new Error("Worker Error");
+        // Detailed error checking
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(`Worker Error: ${response.status} - ${errorBody}`);
+        }
 
-        const result: SEOData = await response.json();
+        const result = await response.json();
 
+        // Update the item state with the successful result
         setItems((prev) =>
           prev.map((i) =>
             i.id === item.id ? { ...i, status: 'Ready', data: result } : i
           )
         );
       } catch (error) {
+        console.error("Upload failed for item:", item.id, error);
         setItems((prev) =>
           prev.map((i) =>
-            i.id === item.id ? { ...i, status: 'Error' } : i
+            i.id === item.id ? { ...i, status: 'Error', errorMsg: error.message } : i
           )
         );
       }
@@ -64,27 +58,33 @@ export default function HeroHome() {
     setIsBulkLoading(false);
   };
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text) => {
+    if (!text) return;
     navigator.clipboard.writeText(text);
     alert("Copied to clipboard!");
   };
 
+  const clearAll = () => {
+    setItems([]);
+    setIsBulkLoading(false);
+  };
+
   return (
-    <section className="relative pt-32 pb-12 md:pt-40 md:pb-20">
+    <section className="relative pt-32 pb-12 md:pt-40 md:pb-20 bg-slate-50 min-h-screen">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         
-        {/* Branding & Upload Section */}
-        <div className="text-center pb-12 md:pb-16">
-          <h1 className="text-5xl md:text-6xl font-extrabold leading-tighter tracking-tighter mb-4">
-            AutoAlt<span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-teal-400">Boost</span>
+        {/* Header & Controls */}
+        <div className="text-center pb-12">
+          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight mb-4 text-slate-900">
+            AutoAlt<span className="text-blue-600">Boost</span>
           </h1>
-          <p className="text-xl text-gray-600 mb-8">
-            The AI-powered SEO engine for e-commerce. Identify, Search, and Optimize in bulk.
+          <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
+            Universal AI Vision. Upload any product to generate SEO-ready alt text and descriptions.
           </p>
 
-          <div className="flex justify-center">
-            <label className="cursor-pointer bg-blue-600 text-white px-10 py-4 rounded-full font-bold shadow-lg hover:bg-blue-700 transition-all hover:scale-105 active:scale-95">
-              {isBulkLoading ? "Processing Queue..." : "Upload Images (Bulk)"}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <label className="cursor-pointer inline-flex items-center justify-center px-8 py-3 font-bold text-white transition-all duration-200 bg-blue-600 rounded-full hover:bg-blue-700 shadow-lg">
+              {isBulkLoading ? "AI is Analyzing..." : "Upload Photos (Bulk)"}
               <input 
                 type="file" 
                 multiple 
@@ -94,86 +94,102 @@ export default function HeroHome() {
                 disabled={isBulkLoading}
               />
             </label>
+            
+            {items.length > 0 && (
+              <button 
+                onClick={clearAll}
+                className="px-8 py-3 font-bold text-slate-600 bg-white border border-slate-200 rounded-full hover:bg-slate-50 transition-all"
+              >
+                Clear Results
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Dashboard Table */}
+        {/* Results Table */}
         {items.length > 0 && (
-          <div className="mt-12 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50/50">
+          <div className="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50/50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Product</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">SEO Metadata</th>
-                  <th className="px-6 py-4 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
+                  <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Image</th>
+                  <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">SEO Generation</th>
+                  <th className="px-6 py-4 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
+              <tbody className="divide-y divide-slate-100">
                 {items.map((item) => (
-                  <tr key={item.id} className="hover:bg-blue-50/30 transition-colors">
+                  <tr key={item.id} className="hover:bg-blue-50/20 transition-colors">
                     
-                    {/* Thumbnail Column */}
-                    <td className="px-6 py-6 whitespace-nowrap align-top">
-                      <div className="relative w-32 h-32">
-                        <img src={item.preview} alt="Preview" className="w-full h-full object-cover rounded-xl shadow-md border border-white" />
+                    {/* Preview Thumbnail */}
+                    <td className="px-6 py-6 align-top">
+                      <div className="relative w-28 h-28 flex-shrink-0">
+                        <img src={item.preview} alt="Thumbnail" className="w-full h-full object-cover rounded-xl shadow-sm border border-slate-200" />
                         {item.status === 'Processing' && (
-                          <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center rounded-xl">
-                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+                          <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center rounded-xl">
+                            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                           </div>
                         )}
                       </div>
                     </td>
 
-                    {/* SEO Content Column */}
+                    {/* SEO Content Output */}
                     <td className="px-6 py-6">
                       {item.status === 'Ready' && item.data ? (
-                        <div className="space-y-5 max-w-2xl">
+                        <div className="space-y-6 max-w-xl">
                           <div>
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Alt Text</span>
-                              <button onClick={() => copyToClipboard(item.data!.alt_text)} className="text-[10px] text-blue-500 hover:underline">Copy</button>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase">Alt Text</span>
+                              <button onClick={() => copyToClipboard(item.data.alt_text)} className="text-[10px] font-bold text-blue-500 uppercase hover:underline">Copy</button>
                             </div>
-                            <p className="text-sm text-gray-800 font-medium leading-relaxed">{item.data.alt_text}</p>
+                            <p className="text-sm text-slate-800 font-medium">{item.data.alt_text}</p>
                           </div>
 
                           <div>
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Meta Description</span>
-                              <button onClick={() => copyToClipboard(item.data!.description)} className="text-[10px] text-blue-500 hover:underline">Copy</button>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase">Meta Description</span>
+                              <button onClick={() => copyToClipboard(item.data.description)} className="text-[10px] font-bold text-blue-500 uppercase hover:underline">Copy</button>
                             </div>
-                            <p className="text-sm text-gray-500 italic leading-relaxed">{item.data.description}</p>
+                            <p className="text-sm text-slate-600 italic">{item.data.description}</p>
                           </div>
 
                           <div>
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">SEO Keywords</span>
-                              <button onClick={() => copyToClipboard(item.data!.keywords)} className="text-[10px] text-blue-500 hover:underline">Copy All</button>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase">Keywords (SEO)</span>
+                              <button onClick={() => copyToClipboard(item.data.keywords)} className="text-[10px] font-bold text-blue-500 uppercase hover:underline">Copy All</button>
                             </div>
-                            <div className="text-xs text-blue-600 bg-blue-50 p-3 rounded-lg whitespace-pre-line leading-loose border border-blue-100">
+                            <div className="text-xs text-blue-700 bg-blue-50 p-4 rounded-xl whitespace-pre-line leading-loose border border-blue-100 font-medium">
                               {item.data.keywords}
                             </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center space-x-2">
-                           <span className={`text-sm font-medium ${item.status === 'Error' ? 'text-red-500' : 'text-gray-400'}`}>
-                             {item.status === 'Processing' ? 'AI is analyzing product & competitors...' : item.status}
-                           </span>
+                        <div className="py-8">
+                          {item.status === 'Error' ? (
+                            <div className="p-3 bg-red-50 rounded-lg border border-red-100">
+                              <p className="text-xs text-red-600 font-bold uppercase mb-1">Analysis Failed</p>
+                              <p className="text-xs text-red-500 leading-normal">{item.errorMsg}</p>
+                            </div>
+                          ) : (
+                            <span className="text-sm font-medium text-slate-400 animate-pulse italic">
+                              Identifying product details...
+                            </span>
+                          )}
                         </div>
                       )}
                     </td>
 
                     {/* Action Column */}
-                    <td className="px-6 py-6 whitespace-nowrap text-center align-top">
+                    <td className="px-6 py-6 align-top text-center">
                       <button 
                         disabled={item.status !== 'Ready'}
-                        className={`px-6 py-2 rounded-full text-xs font-bold transition-all ${
+                        className={`px-6 py-2 rounded-full text-[11px] font-bold transition-all shadow-sm ${
                           item.status === 'Ready' 
-                          ? 'bg-green-500 text-white shadow-md hover:bg-green-600 hover:-translate-y-0.5' 
-                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          ? 'bg-emerald-500 text-white hover:bg-emerald-600' 
+                          : 'bg-slate-100 text-slate-300 cursor-not-allowed'
                         }`}
                       >
-                        {item.status === 'Ready' ? 'Verify' : 'Waiting'}
+                        {item.status === 'Ready' ? 'VERIFIED' : 'WAITING'}
                       </button>
                     </td>
                   </tr>
@@ -182,7 +198,6 @@ export default function HeroHome() {
             </table>
           </div>
         )}
-
       </div>
     </section>
   );
