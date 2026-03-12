@@ -11,7 +11,7 @@ const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!file) return;
 
     setLoading(true);
-    setResult("AutoAltBoost is analyzing competitors and generating SEO...");
+    setResult("Processing...");
 
     try {
       const response = await fetch("https://auto-alt-boost.hester-anderson1981.workers.dev", {
@@ -19,21 +19,23 @@ const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         body: file,
       });
       
-      const json = await response.json();
-      
-      // Since the Worker now sends back an object, we format it for the screen
-      const formattedResult = `
-        ALT TEXT: ${json.alt_text}
-        
-        DESCRIPTION: ${json.description}
-        
-        KEYWORDS:
-        ${json.keywords}
-      `;
-      
-      setResult(formattedResult);
+      const data = await response.json();
+
+      // Check if the AI returned an error
+      if (data.error) {
+        setResult("AI Error: " + data.error);
+        return;
+      }
+
+      // Display the results clearly
+      setResult(`
+        ALT: ${data.alt_text || "N/A"}
+        DESC: ${data.description || "N/A"}
+        KEYS: ${data.keywords || "N/A"}
+      `);
+
     } catch (error) {
-      setResult("Error: Make sure your Serper API Key is inside the Worker code.");
+      setResult("System Error: Check your Console (F12)");
     } finally {
       setLoading(false);
     }
