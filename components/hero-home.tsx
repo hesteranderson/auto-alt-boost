@@ -27,10 +27,14 @@ export default function HeroHome() {
     // 2. Process each image sequentially to avoid overloading the Worker
     for (const item of newUploads) {
       try {
-        const response = await fetch("https://auto-alt-boost.hester-anderson1981.workers.dev", {
-          method: "POST",
-          body: item.file,
-        });
+       // Inside your for loop in hero-home.js
+const response = await fetch("https://auto-alt-boost.hester-anderson1981.workers.dev", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/octet-stream", // Tells the worker: "This is raw data"
+  },
+  body: item.file, // Ensure this is the actual File object
+});
 
         // Detailed error checking
         if (!response.ok) {
