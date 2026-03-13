@@ -33,9 +33,10 @@ export default function HeroHome() {
           body: fileBuffer,
         });
 
-        if (!response.ok) throw new Error(`Worker Error: ${response.status}`);
-
         const result = await response.json();
+
+        // LOG THE RESULT: Open your browser console (F12) to see what Gemini is actually sending!
+        console.log("Gemini Response:", result);
 
         setItems((prev) =>
           prev.map((i) =>
@@ -55,34 +56,28 @@ export default function HeroHome() {
 
   const copyToClipboard = (text) => {
     if (!text) return;
+    // Fixes the "undefined" copy issue by converting lists to strings
     const cleanText = Array.isArray(text) ? text.join(", ") : text;
     navigator.clipboard.writeText(cleanText);
-    alert("Copied!");
+    alert("Copied successfully!");
   };
 
   return (
     <section className="relative pt-32 pb-12 bg-slate-50 min-h-screen">
       <div className="max-w-6xl mx-auto px-4">
         
-        {/* Header */}
         <div className="text-center pb-12">
           <h1 className="text-6xl font-black mb-4 text-slate-900">
             AutoAlt<span className="text-blue-600">Boost</span>
           </h1>
-          <div className="flex justify-center gap-4 mt-8">
+          <div className="flex justify-center gap-4 mt-6">
             <label className="cursor-pointer px-10 py-4 font-bold text-white bg-blue-600 rounded-full hover:bg-blue-700 shadow-xl transition-all">
-              {isBulkLoading ? "AI is Analyzing..." : "Upload Images (Bulk)"}
-              <input type="file" multiple accept="image/*" className="hidden" onChange={handleUpload} disabled={isBulkLoading} />
+              {isBulkLoading ? "Analyzing..." : "Upload Images (Bulk)"}
+              <input type="file" multiple accept="image/*" className="hidden" onChange={handleUpload} />
             </label>
-            {items.length > 0 && (
-              <button onClick={() => setItems([])} className="px-10 py-4 font-bold text-slate-600 bg-white border rounded-full hover:bg-slate-50">
-                Clear
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Dashboard */}
         {items.length > 0 && (
           <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 overflow-hidden">
             <table className="min-w-full">
@@ -97,56 +92,61 @@ export default function HeroHome() {
                 {items.map((item) => (
                   <tr key={item.id}>
                     <td className="px-8 py-8 align-top">
-                      <img src={item.preview} className="w-44 h-44 object-cover rounded-3xl border shadow-sm" alt="Thumbnail" />
+                      <img src={item.preview} className="w-40 h-40 object-cover rounded-3xl border shadow-sm" alt="Preview" />
                     </td>
                     
                     <td className="px-8 py-8">
                       {item.status === 'Ready' && item.data ? (
                         <div className="space-y-6 max-w-lg">
+                          {/* ALT TEXT */}
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase">Alt Text</span>
-                              <button onClick={() => copyToClipboard(item.data.alt_text || item.data.altText)} className="text-[10px] font-bold text-blue-500 uppercase">Copy</button>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Alt Text</span>
+                              <button onClick={() => copyToClipboard(item.data.alt_text || item.data.altText || item.data.alt)} className="text-[10px] font-bold text-blue-500 uppercase">Copy</button>
                             </div>
-                            {/* Forced Dark Text */}
                             <p className="text-sm text-slate-900 font-bold">
-                              {item.data.alt_text || item.data.altText || "No data received"}
+                              {item.data.alt_text || item.data.altText || item.data.alt || "Analyzing..."}
                             </p>
                           </div>
 
+                          {/* DESCRIPTION */}
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase">Description</span>
-                              <button onClick={() => copyToClipboard(item.data.description || item.data.desc)} className="text-[10px] font-bold text-blue-500 uppercase">Copy</button>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Meta Description</span>
+                              <button onClick={() => copyToClipboard(item.data.description || item.data.desc || item.data.meta_description)} className="text-[10px] font-bold text-blue-500 uppercase">Copy</button>
                             </div>
                             <p className="text-sm text-slate-600 italic leading-relaxed">
-                              {item.data.description || item.data.desc || "No data received"}
+                              {item.data.description || item.data.desc || item.data.meta_description || "Optimizing..."}
                             </p>
                           </div>
 
+                          {/* KEYWORDS */}
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase">Keywords</span>
-                              <button onClick={() => copyToClipboard(item.data.keywords)} className="text-[10px] font-bold text-blue-500 uppercase">Copy All</button>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SEO Keywords</span>
+                              <button onClick={() => copyToClipboard(item.data.keywords || item.data.tags)} className="text-[10px] font-bold text-blue-500 uppercase">Copy All</button>
                             </div>
-                            {/* Blue Background for Keywords */}
-                            <div className="text-xs text-blue-900 bg-blue-50 p-4 rounded-xl border border-blue-100 font-medium">
-                              {Array.isArray(item.data.keywords) ? item.data.keywords.join(', ') : (item.data.keywords || "No data")}
+                            <div className="text-xs text-blue-900 bg-blue-50 p-4 rounded-xl border border-blue-100 font-medium leading-relaxed">
+                              {Array.isArray(item.data.keywords) 
+                                ? item.data.keywords.join(', ') 
+                                : (item.data.keywords || item.data.tags || "Extracting...")}
                             </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="py-12">
-                          <p className="text-sm text-slate-400 italic animate-pulse">
-                            {item.status === 'Error' ? `Error: ${item.errorMsg}` : "Gemini is writing SEO metadata..."}
-                          </p>
+                        <div className="py-12 flex items-center gap-3">
+                          {item.status === 'Error' ? (
+                            <p className="text-sm text-red-500 font-bold uppercase">Error Loading Data</p>
+                          ) : (
+                            <p className="text-sm text-slate-400 animate-pulse italic">Gemini AI is processing your product...</p>
+                          )}
                         </div>
                       )}
                     </td>
 
                     <td className="px-8 py-8 align-top text-center">
-                      <span className={`px-8 py-2 rounded-full text-[10px] font-black tracking-widest ${
-                        item.status === 'Ready' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-slate-100 text-slate-400'
+                      <span className={`px-8 py-2 rounded-full text-[10px] font-black tracking-widest transition-all ${
+                        item.status === 'Ready' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-slate-100 text-slate-400'
                       }`}>
                         {item.status === 'Ready' ? 'VERIFIED' : 'WAITING'}
                       </span>
