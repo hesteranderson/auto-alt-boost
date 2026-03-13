@@ -32,16 +32,7 @@ export default function HeroHome() {
           body: fileBuffer,
         });
 
-        let result = await response.json();
-
-        // THE FIX: If result is a string, force it to become a JSON object
-        if (typeof result === "string") {
-          try {
-            result = JSON.parse(result);
-          } catch (e) {
-            console.error("Could not parse JSON string", e);
-          }
-        }
+        const result = await response.json();
 
         setItems((prev) =>
           prev.map((i) =>
@@ -63,89 +54,110 @@ export default function HeroHome() {
     if (!text) return;
     const cleanText = Array.isArray(text) ? text.join(", ") : text;
     navigator.clipboard.writeText(cleanText);
-    alert("Copied!");
+    alert("Copied to clipboard!");
   };
 
   return (
     <section className="relative pt-32 pb-12 bg-slate-50 min-h-screen">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         
+        {/* Header Section */}
         <div className="text-center pb-12">
-          <h1 className="text-6xl font-black mb-4 text-slate-900">
+          <h1 className="text-6xl font-black mb-4 text-slate-900 tracking-tight">
             AutoAlt<span className="text-blue-600">Boost</span>
           </h1>
-          <div className="flex justify-center mt-8">
-            <label className="cursor-pointer px-10 py-4 font-bold text-white bg-blue-600 rounded-full hover:bg-blue-700 shadow-xl transition-all">
-              {isBulkLoading ? "AI is Analyzing..." : "Upload Images (Bulk)"}
-              <input type="file" multiple accept="image/*" className="hidden" onChange={handleUpload} disabled={isBulkLoading} />
-            </label>
-          </div>
+          <p className="text-slate-500 mb-8 max-w-lg mx-auto italic">Identify, Search, and Optimize your product catalog in bulk.</p>
+          
+          <label className="cursor-pointer inline-flex items-center px-12 py-4 font-bold text-white bg-blue-600 rounded-full hover:bg-blue-700 shadow-xl transition-all">
+            {isBulkLoading ? "AI is Analyzing..." : "Upload Images (Bulk)"}
+            <input type="file" multiple accept="image/*" className="hidden" onChange={handleUpload} disabled={isBulkLoading} />
+          </label>
         </div>
 
+        {/* Results Table */}
         {items.length > 0 && (
           <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 overflow-hidden">
             <table className="min-w-full">
-              <thead className="bg-slate-50 border-b">
+              <thead className="bg-slate-50/50 border-b border-slate-100">
                 <tr>
-                  <th className="px-8 py-5 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Product</th>
-                  <th className="px-8 py-5 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">SEO Metadata</th>
-                  <th className="px-8 py-5 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
+                  <th className="px-8 py-6 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Product</th>
+                  <th className="px-8 py-6 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">SEO Metadata</th>
+                  <th className="px-8 py-6 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-50">
                 {items.map((item) => (
-                  <tr key={item.id}>
-                    <td className="px-8 py-8 align-top">
-                      <img src={item.preview} className="w-44 h-44 object-cover rounded-3xl border shadow-sm" alt="Preview" />
+                  <tr key={item.id} className="hover:bg-blue-50/5 transition-colors">
+                    {/* Image Column */}
+                    <td className="px-8 py-10 align-top">
+                      <img src={item.preview} className="w-40 h-40 object-cover rounded-3xl border border-slate-200 shadow-sm" alt="Thumbnail" />
                     </td>
                     
-                    <td className="px-8 py-8">
+                    {/* SEO Data Column with Smart Mapping */}
+                    <td className="px-8 py-10 align-top">
                       {item.status === 'Ready' && item.data ? (
-                        <div className="space-y-6 max-w-lg">
+                        <div className="space-y-6 max-w-xl">
                           <div>
                             <div className="flex justify-between items-center mb-1">
                               <span className="text-[10px] font-bold text-slate-400 uppercase">Alt Text</span>
-                              <button onClick={() => copyToClipboard(item.data.alt_text || item.data.altText || item.data.alt)} className="text-[10px] font-bold text-blue-500 uppercase">Copy</button>
+                              <button 
+                                onClick={() => copyToClipboard(item.data.alt_text || item.data.altText || item.data.alt)} 
+                                className="text-[10px] font-bold text-blue-500 uppercase hover:underline"
+                              >
+                                Copy
+                              </button>
                             </div>
-                            {/* Force Dark Slate Color */}
-                            <p className="text-sm text-slate-900 font-bold">
-                              {item.data.alt_text || item.data.altText || item.data.alt || "Analyzing..."}
+                            <p className="text-sm text-slate-800 font-semibold leading-snug">
+                              {item.data.alt_text || item.data.altText || item.data.alt || "Data found, but key name mismatch"}
                             </p>
                           </div>
 
                           <div>
                             <div className="flex justify-between items-center mb-1">
                               <span className="text-[10px] font-bold text-slate-400 uppercase">Description</span>
-                              <button onClick={() => copyToClipboard(item.data.description || item.data.desc || item.data.meta_description)} className="text-[10px] font-bold text-blue-500 uppercase">Copy</button>
+                              <button 
+                                onClick={() => copyToClipboard(item.data.description || item.data.desc || item.data.meta_description)} 
+                                className="text-[10px] font-bold text-blue-500 uppercase hover:underline"
+                              >
+                                Copy
+                              </button>
                             </div>
                             <p className="text-sm text-slate-600 italic leading-relaxed">
-                              {item.data.description || item.data.desc || item.data.meta_description || "Processing description..."}
+                              {item.data.description || item.data.desc || item.data.meta_description || "No description found"}
                             </p>
                           </div>
 
                           <div>
                             <div className="flex justify-between items-center mb-1">
                               <span className="text-[10px] font-bold text-slate-400 uppercase">Keywords</span>
-                              <button onClick={() => copyToClipboard(item.data.keywords || item.data.tags)} className="text-[10px] font-bold text-blue-500 uppercase">Copy All</button>
+                              <button 
+                                onClick={() => copyToClipboard(item.data.keywords || item.data.tags)} 
+                                className="text-[10px] font-bold text-blue-500 uppercase hover:underline"
+                              >
+                                Copy All
+                              </button>
                             </div>
-                            <div className="text-xs text-blue-900 bg-blue-50 p-4 rounded-xl border border-blue-100 font-medium leading-relaxed">
+                            <div className="text-xs text-blue-700 bg-blue-50 p-4 rounded-xl border border-blue-100 mt-1 font-medium leading-relaxed">
                               {Array.isArray(item.data.keywords) 
                                 ? item.data.keywords.join(', ') 
-                                : (item.data.keywords || item.data.tags || "Generating keywords...")}
+                                : (item.data.keywords || item.data.tags || "No keywords found")}
                             </div>
                           </div>
                         </div>
                       ) : (
                         <div className="py-12">
-                          <p className="text-sm text-slate-400 italic animate-pulse font-medium">
-                             Gemini is reading the pixels...
-                          </p>
+                          {item.status === 'Error' ? (
+                            <p className="text-sm text-red-500 font-bold uppercase">Data Error - Please check Worker</p>
+                          ) : (
+                            <p className="text-sm text-slate-400 animate-pulse italic">Processing pixels...</p>
+                          )}
                         </div>
                       )}
                     </td>
 
-                    <td className="px-8 py-8 align-top text-center">
-                      <span className={`px-8 py-2 rounded-full text-[10px] font-black tracking-widest transition-all ${
+                    {/* Status Column */}
+                    <td className="px-8 py-10 align-top text-center">
+                      <span className={`px-8 py-2.5 rounded-full text-[10px] font-black tracking-widest shadow-sm transition-all ${
                         item.status === 'Ready' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-slate-100 text-slate-400'
                       }`}>
                         {item.status === 'Ready' ? 'VERIFIED' : 'WAITING'}
