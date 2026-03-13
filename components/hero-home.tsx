@@ -25,8 +25,13 @@ export default function HeroHome() {
 
     for (const item of newUploads) {
       try {
-        // CONVERT TO BUFFER: This ensures the Worker receives the data correctly
-        const fileBuffer = await item.file.arrayBuffer();
+        // BRUTE FORCE: Use FileReader to ensure the buffer is loaded
+        const fileBuffer = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsArrayBuffer(item.file);
+        });
 
         const response = await fetch("https://auto-alt-boost.hester-anderson1981.workers.dev", {
           method: "POST",
