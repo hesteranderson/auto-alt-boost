@@ -26,20 +26,23 @@ export default function HeroHome() {
 
     // 2. Process each image sequentially
     for (const item of newUploads) {
-      try {
-        const response = await fetch("https://auto-alt-boost.hester-anderson1981.workers.dev", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/octet-stream",
-          },
-          body: item.file,
-        });
+      // ... inside the for loop in hero-home.js
+try {
+  const response = await fetch("https://auto-alt-boost.hester-anderson1981.workers.dev", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/octet-stream", // Crucial: tells worker this is a raw file
+    },
+    body: item.file, // item.file is the raw File object from the input
+  });
 
-        if (!response.ok) {
-          throw new Error(`Server Error: ${response.status}`);
-        }
+  if (!response.ok) {
+    const errorBody = await response.json();
+    throw new Error(errorBody.message || `Error ${response.status}`);
+  }
 
-        const result = await response.json();
+  const result = await response.json();
+// ...
 
         // Update item with data from Gemini
         setItems((prev) =>
