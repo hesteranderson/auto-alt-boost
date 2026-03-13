@@ -32,9 +32,17 @@ export default function HeroHome() {
           body: fileBuffer,
         });
 
-        const result = await response.json();
+        let result = await response.json();
 
-        // Update state with the result from the worker
+        // THE FIX: If result is a string, force it to become a JSON object
+        if (typeof result === "string") {
+          try {
+            result = JSON.parse(result);
+          } catch (e) {
+            console.error("Could not parse JSON string", e);
+          }
+        }
+
         setItems((prev) =>
           prev.map((i) =>
             i.id === item.id ? { ...i, status: 'Ready', data: result } : i
@@ -68,7 +76,7 @@ export default function HeroHome() {
           </h1>
           <div className="flex justify-center mt-8">
             <label className="cursor-pointer px-10 py-4 font-bold text-white bg-blue-600 rounded-full hover:bg-blue-700 shadow-xl transition-all">
-              {isBulkLoading ? "Analyzing..." : "Upload Images (Bulk)"}
+              {isBulkLoading ? "AI is Analyzing..." : "Upload Images (Bulk)"}
               <input type="file" multiple accept="image/*" className="hidden" onChange={handleUpload} disabled={isBulkLoading} />
             </label>
           </div>
@@ -99,9 +107,9 @@ export default function HeroHome() {
                               <span className="text-[10px] font-bold text-slate-400 uppercase">Alt Text</span>
                               <button onClick={() => copyToClipboard(item.data.alt_text || item.data.altText || item.data.alt)} className="text-[10px] font-bold text-blue-500 uppercase">Copy</button>
                             </div>
-                            {/* SAFE DISPLAY: Checks multiple possible names for the data */}
+                            {/* Force Dark Slate Color */}
                             <p className="text-sm text-slate-900 font-bold">
-                              {item.data.alt_text || item.data.altText || item.data.alt || "Data found, mapping failed"}
+                              {item.data.alt_text || item.data.altText || item.data.alt || "Analyzing..."}
                             </p>
                           </div>
 
@@ -111,7 +119,7 @@ export default function HeroHome() {
                               <button onClick={() => copyToClipboard(item.data.description || item.data.desc || item.data.meta_description)} className="text-[10px] font-bold text-blue-500 uppercase">Copy</button>
                             </div>
                             <p className="text-sm text-slate-600 italic leading-relaxed">
-                              {item.data.description || item.data.desc || item.data.meta_description || "No description available"}
+                              {item.data.description || item.data.desc || item.data.meta_description || "Processing description..."}
                             </p>
                           </div>
 
@@ -123,14 +131,14 @@ export default function HeroHome() {
                             <div className="text-xs text-blue-900 bg-blue-50 p-4 rounded-xl border border-blue-100 font-medium leading-relaxed">
                               {Array.isArray(item.data.keywords) 
                                 ? item.data.keywords.join(', ') 
-                                : (item.data.keywords || item.data.tags || "Keywords generated")}
+                                : (item.data.keywords || item.data.tags || "Generating keywords...")}
                             </div>
                           </div>
                         </div>
                       ) : (
                         <div className="py-12">
-                          <p className="text-sm text-slate-400 italic animate-pulse">
-                            {item.status === 'Error' ? "Error loading metadata" : "Gemini is analyzing pixels..."}
+                          <p className="text-sm text-slate-400 italic animate-pulse font-medium">
+                             Gemini is reading the pixels...
                           </p>
                         </div>
                       )}
@@ -138,7 +146,7 @@ export default function HeroHome() {
 
                     <td className="px-8 py-8 align-top text-center">
                       <span className={`px-8 py-2 rounded-full text-[10px] font-black tracking-widest transition-all ${
-                        item.status === 'Ready' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-slate-100 text-slate-400'
+                        item.status === 'Ready' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-slate-100 text-slate-400'
                       }`}>
                         {item.status === 'Ready' ? 'VERIFIED' : 'WAITING'}
                       </span>
